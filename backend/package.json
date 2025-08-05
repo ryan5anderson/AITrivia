@@ -1,7 +1,14 @@
 {
+  "scripts": {
+    "setup": "psql --username postgres -f setup.sql; node dummy.js",
+    "start": "cd app; node server.js"
+  },
   "dependencies": {
+    "argon2": "^0.30.3",
+    "cookie-parser": "^1.4.6",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "openai": "^5.11.0"
+    "openai": "^5.11.0",
+    "pg": "^8.11.1"
   }
 }
