@@ -28,6 +28,23 @@ function Home() {
         </button>
 
         <button
+        onClick={() => navigate('/register')}
+        style={{
+            marginRight: '1rem',
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: '#ffc107',
+            color: '#000',
+            cursor: 'pointer',
+        }}
+        >
+        Register
+        </button>
+
+
+        <button
           style={{
             padding: '0.5rem 1rem',
             fontSize: '1rem',
