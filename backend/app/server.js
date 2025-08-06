@@ -4,14 +4,36 @@ let argon2 = require("argon2"); // or bcrypt, whatever
 let cookieParser = require("cookie-parser");
 let crypto = require("crypto");
 let env = require("../env.json");
+let cors = require("cors");
 
 let hostname = "localhost";
 let port = 3000;
 
 let pool = new Pool(env);
 let app = express();
+
+// Enable CORS for frontend communication
+app.use(cors({
+  origin: "http://localhost:3001", // React app URL
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(cookieParser());
+
+// Add general request logging
+app.use((req, res, next) => {
+  console.log(`📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log("Headers:", req.headers);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log("Body:", req.body);
+  }
+  next();
+});
+
+// Import and use API routes
+const apiRoutes = require("../server.js");
+app.use("/api", apiRoutes);
 
 // global object for storing tokens
 // in a real app, we'd save them to a db so even if the server exits
@@ -20,6 +42,8 @@ let tokenStorage = {};
 
 pool.connect().then(() => {
   console.log("Connected to database");
+}).catch((err) => {
+  console.log("Database connection failed (but server will continue for API routes):", err.message);
 });
 
 /* returns a random 32 byte string */
