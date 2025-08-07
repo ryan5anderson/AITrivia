@@ -1,13 +1,33 @@
 require("dotenv").config();
 const { OpenAI } = require("openai");
 const { openaiApiKey } = require("../config");
+const questionStorage = require('./questionStorage');
 
 const openai = new OpenAI({ apiKey: openaiApiKey });
 
-async function generateTriviaQuestions(topic) {
+async function generateTriviaQuestions(topic, difficulty = 'medium', forceGenerate = false) {
+  console.log(`Checking cache for topic: "${topic}" with difficulty: ${difficulty}`);
+  
+  // Check if we have cached questions (unless force generate is true)
+  if (!forceGenerate) {
+    const hasQuestions = await questionStorage.hasQuestionsForTopic(topic);
+    if (hasQuestions) {
+      console.log(`Found cached questions for topic: "${topic}"`);
+      return await questionStorage.getRandomQuestions(topic, 5);
+    }
+  }
+  
+  console.log(`Generating new questions for topic: "${topic}"`);
+  
+  const difficultyPrompts = {
+    easy: "Make them relatively easy, suitable for general knowledge.",
+    medium: "Make them moderately challenging with some tricky elements.",
+    hard: "Make them quite challenging and require specific knowledge.",
+  };
+
   const prompt = `
 Generate exactly 5 trivia questions about "${topic}". 
-Make them fun, interesting, and sometimes tricky. 
+${difficultyPrompts[difficulty] || difficultyPrompts.medium}
 Each question should have exactly 4 answer choices.
 
 Return the response as a valid JSON array in this exact format:
@@ -58,7 +78,10 @@ Do not include any other text, just return the valid JSON array.
       }
     });
     
-    return questions;
+    // Store the generated questions
+    const storedQuestions = await questionStorage.storeQuestions(topic, questions, difficulty);
+    
+    return storedQuestions;
   } catch (error) {
     console.error("Error parsing OpenAI response:", error);
     console.error("Raw response:", responseText);
@@ -67,9 +90,9 @@ Do not include any other text, just return the valid JSON array.
 }
 
 // Keep the old function for backward compatibility
-async function generateTriviaQuestion(topic) {
-  const questions = await generateTriviaQuestions(topic);
-  return questions[0]; // Return first question in old format
+async function generateTriviaQuestion(topic, difficulty = 'medium') {
+  const questions = await generateTriviaQuestions(topic, difficulty);
+  return questions[0];
 }
 
 module.exports = { generateTriviaQuestion, generateTriviaQuestions };
