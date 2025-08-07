@@ -9,7 +9,7 @@ async function testFileStorage() {
   try {
     console.log('1. Checking questions directory...');
     const exists = await fs.access(questionsDir).then(() => true).catch(() => false);
-    console.log('Questions directory exists:', exists);
+    console.log(`${exists ? '✅' : '❌'} Questions directory exists:`, exists);
 
     if (exists) {
       console.log('\n2. Listing stored question files...');
@@ -21,14 +21,14 @@ async function testFileStorage() {
           const filepath = path.join(questionsDir, file);
           const content = await fs.readFile(filepath, 'utf8');
           const data = JSON.parse(content);
-          console.log(`📁 ${file}: ${data.questions.length} questions on "${data.topic}"`);
+          console.log(`✅ ${file}: ${data.questions.length} questions on "${data.topic}"`);
         }
       }
     }
 
-    console.log('\nFile storage test completed!');
+    console.log('\n✅ File storage test completed!');
   } catch (error) {
-    console.error('File storage test failed:', error);
+    console.error('❌ File storage test failed:', error);
   }
 }
 
@@ -42,11 +42,11 @@ async function testDatabaseIntegrity() {
   try {
     console.log('1. Testing database connection...');
     await pool.query('SELECT 1');
-    console.log('Database connection successful');
+    console.log('✅ Database connection successful');
 
     console.log('\n2. Testing questions table...');
     const result = await pool.query('SELECT COUNT(*) FROM questions');
-    console.log('Questions table accessible, total questions:', result.rows[0].count);
+    console.log('✅ Questions table accessible, total questions:', result.rows[0].count);
 
     console.log('\n3. Testing data integrity...');
     const integrityCheck = await pool.query(`
@@ -63,7 +63,7 @@ async function testDatabaseIntegrity() {
     
     console.log('Integrity check results:');
     integrityCheck.rows.forEach(row => {
-      console.log(`   Topic: ${row.topic}, Questions: ${row.count}, Issues: ${parseInt(row.null_choices) + parseInt(row.empty_questions)}`);
+      console.log(`   ✅ Topic: ${row.topic}, Questions: ${row.count}, Issues: ${parseInt(row.null_choices) + parseInt(row.empty_questions)}`);
     });
 
     console.log('\n4. Testing question metadata...');
@@ -79,13 +79,13 @@ async function testDatabaseIntegrity() {
     
     console.log('Metadata check results:');
     metadataCheck.rows.forEach(row => {
-      console.log(`   Difficulty: ${row.difficulty}, Count: ${row.count}, Avg Usage: ${parseFloat(row.avg_usage).toFixed(2)}`);
+      console.log(`   ✅ Difficulty: ${row.difficulty}, Count: ${row.count}, Avg Usage: ${parseFloat(row.avg_usage).toFixed(2)}`);
     });
 
     await pool.end();
-    console.log('\nDatabase integrity test completed!');
+    console.log('\n✅ Database integrity test completed!');
   } catch (error) {
-    console.error('Database integrity test failed:', error);
+    console.error('❌ Database integrity test failed:', error);
   }
 }
 
@@ -122,15 +122,15 @@ async function testDataConsistency() {
     console.log(`File total questions: ${fileTotal}`);
     
     if (dbTotal === fileTotal) {
-      console.log('Data consistency check passed - DB and files match');
+      console.log('✅ Data consistency check passed - DB and files match');
     } else {
-      console.log('Data consistency warning - DB and files don\'t match (this is normal if some questions were added to DB only)');
+      console.log('❌ Data consistency warning - DB and files don\'t match (this is normal if some questions were added to DB only)');
     }
 
     await pool.end();
-    console.log('\nData consistency test completed!');
+    console.log('\n✅ Data consistency test completed!');
   } catch (error) {
-    console.error('Data consistency test failed:', error);
+    console.error('❌ Data consistency test failed:', error);
   }
 }
 
@@ -138,7 +138,7 @@ async function runDataTests() {
   await testFileStorage();
   await testDatabaseIntegrity();
   await testDataConsistency();
-  console.log('\n🎉 All data storage tests completed!');
+  console.log('\n✅ All data storage tests completed!');
 }
 
 if (require.main === module) {
