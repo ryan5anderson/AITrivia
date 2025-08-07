@@ -18,7 +18,7 @@ async function getTriviaQuestions(req, res) {
   
   try {
     const { topic } = req.body;
-    console.log("📝 Extracted topic:", topic);
+    console.log("Extracted topic:", topic);
     
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
       console.log("Invalid topic provided");

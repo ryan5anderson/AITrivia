@@ -25,29 +25,29 @@ async function testQuestionStorage() {
   try {
     console.log('1. Testing question storage...');
     const stored = await questionStorage.storeQuestions(testTopic, testQuestions, 'easy');
-    console.log('✅ Successfully stored questions');
+    console.log('Successfully stored questions');
     console.log('Stored questions:', stored.length);
 
     console.log('\n2. Testing cache check...');
     const hasQuestions = await questionStorage.hasQuestionsForTopic(testTopic);
-    console.log('✅ Cache check result:', hasQuestions);
+    console.log('Cache check result:', hasQuestions);
 
     console.log('\n3. Testing question retrieval...');
     const retrieved = await questionStorage.getQuestionsForTopic(testTopic, 2);
-    console.log('✅ Retrieved questions:', retrieved.length);
+    console.log('Retrieved questions:', retrieved.length);
     console.log('Questions:', retrieved.map(q => q.question));
 
     console.log('\n4. Testing random selection...');
     const random = await questionStorage.getRandomQuestions(testTopic, 2);
-    console.log('✅ Random questions:', random.length);
+    console.log('Random questions:', random.length);
 
     console.log('\n5. Testing topic statistics...');
     const stats = await questionStorage.getTopicStats(testTopic);
-    console.log('✅ Topic stats:', stats);
+    console.log('Topic stats:', stats);
 
-    console.log('\n✅ All storage tests passed!');
+    console.log('\nAll storage tests passed!');
   } catch (error) {
-    console.error('❌ Storage test failed:', error);
+    console.error('Storage test failed:', error);
   }
 }
 
@@ -59,19 +59,19 @@ async function testQuestionGeneration() {
   try {
     console.log('1. Testing first generation (should create new)...');
     const questions1 = await generateTriviaQuestions('Ancient Rome', 'medium');
-    console.log('✅ Generated questions:', questions1.length);
+    console.log('Generated questions:', questions1.length);
 
     console.log('\n2. Testing second generation (should use cache)...');
     const questions2 = await generateTriviaQuestions('Ancient Rome', 'medium');
-    console.log('✅ Retrieved questions:', questions2.length);
+    console.log('Retrieved questions:', questions2.length);
 
     console.log('\n3. Testing forced generation...');
     const questions3 = await generateTriviaQuestions('Ancient Rome', 'medium', true);
-    console.log('✅ Force generated questions:', questions3.length);
+    console.log('Force generated questions:', questions3.length);
 
-    console.log('\n✅ All generation tests passed!');
+    console.log('\nAll generation tests passed!');
   } catch (error) {
-    console.error('❌ Generation test failed:', error);
+    console.error('Generation test failed:', error);
   }
 }
 
@@ -94,9 +94,9 @@ async function testRandomSelection() {
       }
     }
 
-    console.log('\n✅ Random selection test completed!');
+    console.log('\nRandom selection test completed!');
   } catch (error) {
-    console.error('❌ Random selection test failed:', error);
+    console.error('Random selection test failed:', error);
   }
 }
 

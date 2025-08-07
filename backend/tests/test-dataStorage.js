@@ -9,12 +9,12 @@ async function testFileStorage() {
   try {
     console.log('1. Checking questions directory...');
     const exists = await fs.access(questionsDir).then(() => true).catch(() => false);
-    console.log('✅ Questions directory exists:', exists);
+    console.log('Questions directory exists:', exists);
 
     if (exists) {
       console.log('\n2. Listing stored question files...');
       const files = await fs.readdir(questionsDir);
-      console.log('✅ Found files:', files.length);
+      console.log('Found files:', files.length);
       
       for (const file of files.slice(0, 3)) { // Show first 3 files
         if (file.endsWith('.json')) {
@@ -26,9 +26,9 @@ async function testFileStorage() {
       }
     }
 
-    console.log('\n✅ File storage test completed!');
+    console.log('\nFile storage test completed!');
   } catch (error) {
-    console.error('❌ File storage test failed:', error);
+    console.error('File storage test failed:', error);
   }
 }
 
@@ -42,11 +42,11 @@ async function testDatabaseIntegrity() {
   try {
     console.log('1. Testing database connection...');
     await pool.query('SELECT 1');
-    console.log('✅ Database connection successful');
+    console.log('Database connection successful');
 
     console.log('\n2. Testing questions table...');
     const result = await pool.query('SELECT COUNT(*) FROM questions');
-    console.log('✅ Questions table accessible, total questions:', result.rows[0].count);
+    console.log('Questions table accessible, total questions:', result.rows[0].count);
 
     console.log('\n3. Testing data integrity...');
     const integrityCheck = await pool.query(`
@@ -61,7 +61,7 @@ async function testDatabaseIntegrity() {
       LIMIT 5
     `);
     
-    console.log('✅ Integrity check results:');
+    console.log('Integrity check results:');
     integrityCheck.rows.forEach(row => {
       console.log(`   Topic: ${row.topic}, Questions: ${row.count}, Issues: ${parseInt(row.null_choices) + parseInt(row.empty_questions)}`);
     });
@@ -77,15 +77,15 @@ async function testDatabaseIntegrity() {
       GROUP BY difficulty
     `);
     
-    console.log('✅ Metadata check results:');
+    console.log('Metadata check results:');
     metadataCheck.rows.forEach(row => {
       console.log(`   Difficulty: ${row.difficulty}, Count: ${row.count}, Avg Usage: ${parseFloat(row.avg_usage).toFixed(2)}`);
     });
 
     await pool.end();
-    console.log('\n✅ Database integrity test completed!');
+    console.log('\nDatabase integrity test completed!');
   } catch (error) {
-    console.error('❌ Database integrity test failed:', error);
+    console.error('Database integrity test failed:', error);
   }
 }
 
@@ -122,15 +122,15 @@ async function testDataConsistency() {
     console.log(`File total questions: ${fileTotal}`);
     
     if (dbTotal === fileTotal) {
-      console.log('✅ Data consistency check passed - DB and files match');
+      console.log('Data consistency check passed - DB and files match');
     } else {
-      console.log('⚠️  Data consistency warning - DB and files don\'t match (this is normal if some questions were added to DB only)');
+      console.log('Data consistency warning - DB and files don\'t match (this is normal if some questions were added to DB only)');
     }
 
     await pool.end();
-    console.log('\n✅ Data consistency test completed!');
+    console.log('\nData consistency test completed!');
   } catch (error) {
-    console.error('❌ Data consistency test failed:', error);
+    console.error('Data consistency test failed:', error);
   }
 }
 

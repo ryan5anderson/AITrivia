@@ -45,7 +45,7 @@ function Home() {
 
 
         <button
-        onClick={() => navigate('/game')}
+        onClick={() => navigate('/topic-select')}
           style={{
             padding: '0.5rem 1rem',
             fontSize: '1rem',
