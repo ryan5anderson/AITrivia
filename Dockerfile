@@ -13,13 +13,23 @@ RUN npm ci
 COPY frontend ./
 RUN npm run build
 
+
 ##########
 # Stage 2: Backend runtime (serves API and static frontend)
 ##########
 FROM node:20-alpine AS backend
 
-ENV NODE_ENV=production
+# System CA bundle (keep for general TLS)
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 WORKDIR /app/backend
+
+# Project-specific Supabase CA (place this file in your repo at backend/certs/supabase-ca.crt)
+# This fixes SELF_SIGNED_CERT_IN_CHAIN by pinning your project's CA.
+COPY backend/certs/supabase-ca.crt /app/certs/supabase-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/app/certs/supabase-ca.crt
+
+ENV NODE_ENV=production
 
 # Install backend deps
 COPY backend/package*.json ./
@@ -35,5 +45,5 @@ COPY --from=frontend-builder /app/frontend/build ./public
 ENV PORT=8080
 EXPOSE 8080
 
-# Start backend (monorepo script changes into app/ and runs server)
+# Start backend
 CMD ["npm", "start"]

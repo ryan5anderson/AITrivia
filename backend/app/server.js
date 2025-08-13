@@ -6,11 +6,11 @@ let crypto = require("crypto");
 let cors = require("cors");
 
 let hostname = "0.0.0.0";
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
 const isProduction = process.env.NODE_ENV === "production";
 
 // Always use shared db pool (handles Fly/Supabase SSL settings)
-const { pool } = require("../db");
+const pool = require("../db");
 let app = express();
 
 // Enable CORS for local development only; production is same-origin
@@ -218,5 +218,5 @@ app.get(/^(?!\/api).*/, (req, res) => {
 });
 
 app.listen(port, hostname, () => {
-  console.log(`http://${hostname}:${port}`);
+  console.log(`Listening on ${port}`);
 });

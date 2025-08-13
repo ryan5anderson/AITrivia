@@ -3,7 +3,7 @@ const path = require('path');
 let pool = null;
 try {
   // Prefer shared db module which reads DATABASE_URL from env
-  pool = require('../db').pool;
+  pool = require('../db');
 } catch (_) {
   pool = null;
 }
