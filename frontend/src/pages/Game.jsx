@@ -34,7 +34,8 @@ function Game() {
                 const requestBody = { topic };
                 console.log('Sending request body:', requestBody);
                 
-                const response = await fetch('http://localhost:3000/api/generate-questions', {
+                const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000';
+                const response = await fetch(`${API_BASE}/api/generate-questions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

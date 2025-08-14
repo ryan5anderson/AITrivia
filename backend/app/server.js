@@ -1,22 +1,25 @@
 let express = require("express");
-let { Pool } = require("pg");
+const path = require("path");
 let argon2 = require("argon2"); // or bcrypt, whatever
 let cookieParser = require("cookie-parser");
 let crypto = require("crypto");
-let env = require("../env.json");
 let cors = require("cors");
 
-let hostname = "localhost";
-let port = 3000;
+let hostname = "0.0.0.0";
+let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
+const isProduction = process.env.NODE_ENV === "production";
 
-let pool = new Pool(env);
+// Always use shared db pool (handles Fly/Supabase SSL settings)
+const pool = require("../db");
 let app = express();
 
-// Enable CORS for frontend communication
-app.use(cors({
-  origin: "http://localhost:3001", // React app URL
-  credentials: true
-}));
+// Enable CORS for local development only; production is same-origin
+if (!isProduction) {
+  app.use(cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  }));
+}
 
 app.use(express.json());
 app.use(cookieParser());
@@ -31,9 +34,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve static frontend assets from /backend/public (in production image)
+const publicDir = path.join(__dirname, "..", "public");
+app.use(express.static(publicDir));
+
 // Import and use API routes
 const apiRoutes = require("../server.js");
 app.use("/api", apiRoutes);
+
+// Health endpoints for Fly.io
+app.get('/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get('/health/db', async (_req, res) => {
+  try {
+    const r = await pool.query('select now() as now');
+    res.json({ ok: true, now: r.rows[0].now });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 // global object for storing tokens
 // in a real app, we'd save them to a db so even if the server exits
@@ -191,6 +212,11 @@ app.get("/private", authorize, (req, res) => {
   return res.send("A private message\n");
 });
 
+// Catch-all to support React Router; Express 5 compatible (exclude /api)
+app.get(/^(?!\/api).*/, (req, res) => {
+  return res.sendFile(path.join(publicDir, "index.html"));
+});
+
 app.listen(port, hostname, () => {
-  console.log(`http://${hostname}:${port}`);
+  console.log(`Listening on ${port}`);
 });
