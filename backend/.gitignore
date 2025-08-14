@@ -11,3 +11,7 @@ yarn-error.log*
 
 # OS-specific
 .DS_Store
+
+
+# Local database
+data/

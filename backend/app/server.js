@@ -1,3 +1,4 @@
+require("dotenv").config();
 let express = require("express");
 const path = require("path");
 let argon2 = require("argon2"); // or bcrypt, whatever
@@ -16,7 +17,7 @@ let app = express();
 // Enable CORS for local development only; production is same-origin
 if (!isProduction) {
   app.use(cors({
-    origin: "http://localhost:3001",
+    origin: "http://localhost:3000",
     credentials: true,
   }));
 }
