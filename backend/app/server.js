@@ -54,10 +54,23 @@ function makeToken() {
 // must use same cookie options when setting/deleting a given cookie with res.cookie and res.clearCookie
 // or else the cookie won't actually delete
 // remember that the token is essentially a password that must be kept secret
+
+/*
 let cookieOptions = {
   httpOnly: true, // client-side JS can't access this cookie; important to mitigate cross-site scripting attack damage
   secure: true, // cookie will only be sent over HTTPS connections (and localhost); important so that traffic sniffers can't see it even if our user tried to use an HTTP version of our site, if we supported that
   sameSite: "strict", // browser will only include this cookie on requests to this domain, not other domains; important to prevent cross-site request forgery attacks
+};
+*/
+const isProd = process.env.NODE_ENV === "production";
+let cookieOptions = {
+  httpOnly: true,
+  secure: isProd,          // false in dev so it works on http://localhost
+  sameSite: isProd ? "strict" : "lax",
+  // optional:
+  // maxAge: 1000 * 60 * 60 * 8, // 8 hours
+  // domain: undefined,          // leave unset for localhost
+  // path: "/",
 };
 
 function validateLogin(body) {

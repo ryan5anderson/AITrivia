@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log('Login clicked:', { email, password });
-    // TODO: connect to backend API
+    setStatus(null);
+    setLoading(true);
+    try {
+      await api.login({ username: email, password });
+      // Redirect to Home page after login
+      navigate('/');
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,10 +48,11 @@ function Login() {
             style={{ width: '100%', padding: '0.5rem' }}
           />
         </div>
-        <button type="submit" style={{ padding: '0.5rem 1rem' }}>
-          Log In
+        <button type="submit" disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+          {loading ? 'Logging in...' : 'Log In'}
         </button>
       </form>
+      {status && <p style={{ marginTop: '1rem' }}>{status}</p>}
     </div>
   );
 }

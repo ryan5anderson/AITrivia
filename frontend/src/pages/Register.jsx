@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
+import { api } from '../api';
 
 function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');        // displayed, but backend only needs username/password
+  const [email, setEmail] = useState('');      // we’ll map this to username
   const [password, setPassword] = useState('');
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    console.log('Register clicked:', { name, email, password });
-    // TODO: connect to backend API
+    setStatus(null);
+    setLoading(true);
+    try {
+      await api.register({ username: email, password });
+      setStatus("Account created!");
+      // Optional: auto-login in frontend OR redirect to /login
+      // await api.login({ username: email, password });
+      // navigate('/lobby');
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,10 +59,11 @@ function Register() {
             style={{ width: '100%', padding: '0.5rem' }}
           />
         </div>
-        <button type="submit" style={{ padding: '0.5rem 1rem' }}>
-          Register
+        <button type="submit" disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+          {loading ? 'Registering...' : 'Register'}
         </button>
       </form>
+      {status && <p style={{ marginTop: '1rem' }}>{status}</p>}
     </div>
   );
 }
