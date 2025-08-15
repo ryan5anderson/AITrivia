@@ -11,6 +11,12 @@ RUN npm ci
 
 # Copy frontend source and build
 COPY frontend ./
+
+# Build args for React environment variables
+ARG REACT_APP_SUPABASE_URL
+ARG REACT_APP_SUPABASE_ANON_KEY
+
+# Build with environment variables
 RUN npm run build
 
 

@@ -7,6 +7,9 @@ app = "aitrivia"
 primary_region = "iad"
 
 [build]
+  [build.args]
+    REACT_APP_SUPABASE_URL = "https://hqgemuzdtalbdexodmba.supabase.co"
+    REACT_APP_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZ2VtdXpkdGFsYmRleG9kbWJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMzU2OTgsImV4cCI6MjA3MDYxMTY5OH0.zveuDrjsOBvI8Xew1mJXqRf2TwkIdkscFeA6dP_Vjd4"
 
 [env]
   NODE_ENV = "production"
