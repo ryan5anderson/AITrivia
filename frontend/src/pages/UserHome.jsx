@@ -10,11 +10,10 @@ function UserHome() {
       <p>Ready to play?</p>
       <div style={{ marginTop: '2rem' }}>
         <button
-          onClick={() => navigate('/topic-select')}
+          onClick={() => navigate('/lobby')}
           style={{
-            marginRight: '1rem',
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
+            padding: '0.75rem 1.5rem',
+            fontSize: '1.1rem',
             borderRadius: '8px',
             border: 'none',
             backgroundColor: '#007bff',
@@ -22,22 +21,7 @@ function UserHome() {
             cursor: 'pointer',
           }}
         >
-          Start Game
-        </button>
-
-        <button
-          onClick={() => alert('Join Game is not implemented yet')}
-          style={{
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
-            borderRadius: '8px',
-            border: '1px solid #ccc',
-            backgroundColor: '#f8f9fa',
-            color: '#000',
-            cursor: 'pointer',
-          }}
-        >
-          Join Game
+          Enter Lobby
         </button>
       </div>
     </div>
@@ -45,5 +29,3 @@ function UserHome() {
 }
 
 export default UserHome;
-
-
