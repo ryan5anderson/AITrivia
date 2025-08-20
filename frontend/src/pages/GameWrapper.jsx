@@ -1,75 +1,156 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../realtime/SocketProvider";
-import TopicSelect from "./TopicSelect";
 import Game from "./Game";
 import Leaderboard from "./Leaderboard";
 
 export default function GameWrapper() {
-  const { code } = useParams();
-  const socket = useSocket();
+    const { code: urlCode } = useParams();
+    const socket = useSocket();
+    const navigate = useNavigate();
 
-  // phase: topic | question | leaderboard | over
-  const [phase, setPhase] = useState("topic");
-  const [isHost, setIsHost] = useState(false);
-  const [question, setQuestion] = useState(null);
-  const [leaderboard, setLeaderboard] = useState([]);
+    const [phase, setPhase] = useState("waitingTopic");
+    const [pickerSocketId, setPickerSocketId] = useState(null);
+    const [question, setQuestion] = useState(null);
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [nextPicker, setNextPicker] = useState(null);
 
-  useEffect(() => {
-    // you’ll replace these when wiring the real loop
-    const onRequestTopics = (payload) => {
-      // server will target only the host; others can show a waiting screen
-      setPhase("topic");
-    };
-    const onNewQuestion = (payload) => {
-      setQuestion(payload?.question || null);
-      setPhase("question");
-    };
-    const onScoreUpdate = (payload) => {
-      setLeaderboard(payload?.leaderboard || []);
-      setPhase("leaderboard");
-    };
-    const onHostRotated = (_payload) => {
-      // optional: show a transition
-    };
-    const onGameOver = (payload) => {
-      setLeaderboard(payload?.finalBoard || []);
-      setPhase("over");
-    };
-    const onLobbyUpdate = (list) => {
-      const me = (Array.isArray(list) ? list : list?.players || []).find(p => p.id === socket.id);
-      setIsHost(!!me?.isHost);
+    const roomCodeRef = useRef(urlCode || "");
+    useEffect(() => { if (urlCode) roomCodeRef.current = urlCode; }, [urlCode]);
+
+    const lastPathRef = useRef("");
+    const safeNavigate = (base, maybeCode) => {
+        const rc = (maybeCode || roomCodeRef.current || urlCode || "").toUpperCase();
+        if (!rc) return;
+        const path = `${base}/${rc}`;
+        if (lastPathRef.current !== path) {
+            lastPathRef.current = path;
+            navigate(path, { replace: true });
+        }
     };
 
-    socket.on("requestTopics", onRequestTopics);
-    socket.on("newQuestion", onNewQuestion);
-    socket.on("scoreUpdate", onScoreUpdate);
-    socket.on("hostRotated", onHostRotated);
-    socket.on("gameOver", onGameOver);
-    socket.on("lobby-update", onLobbyUpdate);
+    useEffect(() => {
+        if (!socket) return;
 
-    // ask server to sync (in case of refresh)
-    socket.emit("sync-lobby", { lobbyCode: code });
+        const onPhase = (payload = {}) => {
+            const { phase, pickerSocketId: sid, pickerId, roomCode } = payload;
+            if (roomCode) roomCodeRef.current = roomCode;
+            const psid = sid || pickerId || null;
 
-    return () => {
-      socket.off("requestTopics", onRequestTopics);
-      socket.off("newQuestion", onNewQuestion);
-      socket.off("scoreUpdate", onScoreUpdate);
-      socket.off("hostRotated", onHostRotated);
-      socket.off("gameOver", onGameOver);
-      socket.off("lobby-update", onLobbyUpdate);
-    };
-  }, [socket, code]);
+            setPickerSocketId(psid);
+            setPhase(phase || "waitingTopic");
 
-  // Render current phase (use your existing components)
-  if (phase === "topic") return <TopicSelect isHost={isHost} code={code} socket={socket} />;
-  if (phase === "question") return <Game question={question} code={code} socket={socket} />;
-  if (phase === "leaderboard") return <Leaderboard board={leaderboard} code={code} socket={socket} />;
+            if (phase === "generating") {
+                safeNavigate("/game", roomCode);
+                return;
+            }
+            if ((phase === "topic" || phase === "waitingTopic") && psid && psid === socket.id) {
+                safeNavigate("/topic-select", roomCode);
+            }
+            if (phase === "waitingTopic") {
+                setQuestion(null);
+                setLeaderboard([]);
+            }
+        };
 
-  return (
-    <div style={{ padding: "2rem", textAlign: "center" }}>
-      <h2>Game Over</h2>
-      {/* render final leaderboard */}
-    </div>
-  );
+        const onRequestTopics = (payload = {}) => {
+            const { pickerSocketId: sid, pickerId, roomCode } = payload;
+            if (roomCode) roomCodeRef.current = roomCode;
+            const psid = sid || pickerId || null;
+            setPickerSocketId(psid);
+            if (psid === socket.id) {
+                safeNavigate("/topic-select", roomCode);
+            } else {
+                setPhase("waitingTopic");
+            }
+        };
+
+        const onNewQuestion = (payload = {}) => {
+            const { question, roomCode } = payload;
+            if (roomCode) roomCodeRef.current = roomCode;
+            setQuestion(question || null);
+            setPhase("question");
+            safeNavigate("/game", roomCode);
+        };
+
+        // IMPORTANT: don't flip to "leaderboard" on each scoreUpdate anymore.
+        // Game.jsx listens to scoreUpdate and shows reveal + inline scoreboard.
+
+        const onRoundOver = (payload = {}) => {
+            const { leaderboard: lb, roomCode, nextPickerSocketId } = payload;
+            if (roomCode) roomCodeRef.current = roomCode;
+            setLeaderboard(lb || []);
+            setNextPicker(nextPickerSocketId || null);
+            setPhase("leaderboard");
+            // navigation stays on /game/:code; wrapper renders <Leaderboard/>
+        };
+
+        const onGameOver = (payload = {}) => {
+            const { leaderboard: lb, final, roomCode } = payload;
+            if (roomCode) roomCodeRef.current = roomCode;
+            setLeaderboard(final || lb || []);
+            setPhase("over");
+        };
+
+        socket.on("phase", onPhase);
+        socket.on("requestTopics", onRequestTopics);
+        socket.on("newQuestion", onNewQuestion);
+        socket.on("roundOver", onRoundOver);
+        socket.on("gameOver", onGameOver);
+
+        socket.emit("sync-game", { lobbyCode: roomCodeRef.current || urlCode });
+        socket.emit("sync-lobby", { lobbyCode: roomCodeRef.current || urlCode });
+
+        return () => {
+            socket.off("phase", onPhase);
+            socket.off("requestTopics", onRequestTopics);
+            socket.off("newQuestion", onNewQuestion);
+            socket.off("roundOver", onRoundOver);
+            socket.off("gameOver", onGameOver);
+        };
+    }, [socket, urlCode, navigate]);
+
+    // not picker: waiting view
+    if ((phase === "topic" || phase === "waitingTopic") && pickerSocketId && pickerSocketId !== socket?.id) {
+        return <div style={{ padding: "2rem", textAlign: "center", opacity: 0.85 }}>
+            <h2>Waiting for the picker to choose a topic…</h2>
+        </div>;
+    }
+
+    if (phase === "question" && question) {
+        return <Game question={question} code={roomCodeRef.current} socket={socket} />;
+    }
+
+    if (phase === "leaderboard") {
+        const isNextPicker = nextPicker && nextPicker === socket?.id;
+        return (
+            <Leaderboard
+                board={leaderboard}
+                title="🏁 Round results"
+                onNext={isNextPicker ? () => navigate(`/topic-select/${roomCodeRef.current}`, { replace: true }) : undefined}
+                buttonLabel="Continue →"
+            />
+        );
+    }
+
+    // FINAL leaderboard — show "Return to Lobby"
+    if (phase === "over") {
+        return (
+            <Leaderboard
+                board={leaderboard}
+                title="🏆 Final leaderboard"
+                onNext={() => navigate(`/waiting/${roomCodeRef.current}`, { replace: true })}
+                buttonLabel="↩︎ Return to Lobby"
+            />
+        );
+    }
+
+    if (phase === "generating") {
+        return <div style={{ padding: "2rem", textAlign: "center" }}><h2>Building question…</h2></div>;
+    }
+
+    return <div style={{ padding: "2rem", textAlign: "center" }}>
+        {phase === "over" ? <h2>Game Over</h2> : <h2>Loading…</h2>}
+    </div>;
+
 }

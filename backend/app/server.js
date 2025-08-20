@@ -10,7 +10,7 @@ const argon2 = require("argon2");
 const { Server } = require("socket.io");
 
 const pool = require("../db");                       // shared DB pool
-const lobbyRoutes = require("../routes/lobbyRoutes"); // REST routes
+const apiRoutes = require("../routes"); // unified REST routes
 const lobbySockets = require("../sockets/lobbySockets"); // socket handlers
 
 const hostname = "0.0.0.0";
@@ -56,7 +56,7 @@ app.get("/health/db", async (_req, res) => {
 });
 
 // ------- REST API (mount under /api) -------
-app.use("/api/lobby", lobbyRoutes);
+app.use("/api", apiRoutes);
 
 // SPA catch‑all (exclude /api/*)
 app.get(/^(?!\/api).*/, (_req, res) => {
@@ -71,6 +71,21 @@ const io = new Server(server, {
     true : frontendOrigin, 
     credentials: true,
   },
+});
+
+console.log("[server] Socket.IO attached");
+
+io.engine.on("connection_error", (err) => {
+  console.log("[io] engine connection_error:", {
+    code: err.code,
+    message: err.message,
+    context: err.context,
+  });
+});
+
+io.on("connection", (s) => {
+  console.log("[io] connected", s.id, "ua:", s.handshake.headers["user-agent"]);
+  s.on("disconnect", (reason) => console.log("[io] disconnected", s.id, "reason:", reason));
 });
 
 // Attach socket namespaces/handlers

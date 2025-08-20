@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import UserHome from './pages/UserHome';
 import Lobby from "./pages/Lobby";
 import WaitingRoom from "./pages/WaitingRoom";
+import TopicSelect from "./pages/TopicSelect";
 import GameWrapper from './pages/GameWrapper';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
@@ -63,6 +64,7 @@ function App() {
             <Route path="/lobby" element={<PrivateRoute><Lobby /></PrivateRoute>} />
             <Route path="/waiting/:code" element={<PrivateRoute><WaitingRoom /></PrivateRoute>} />
             <Route path="/game/:code" element={<PrivateRoute><GameWrapper /></PrivateRoute>} />
+            <Route path="/topic-select/:code" element={<PrivateRoute><TopicSelect/></PrivateRoute>} />
           </Route>
 
           {/* Authentication Pages */}

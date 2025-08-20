@@ -1,109 +1,65 @@
-import React, { useState } from 'react';
+// components/QuestionCard.jsx
+import React from "react";
 
-function QuestionCard({ question, onAnswer, onNext, isLast }) {
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [isAnswered, setIsAnswered] = useState(false);
+export default function QuestionCard({ question, onSelect, disabled, correctIndex }) {
+  // question.choices (array of strings)
+  // correctIndex: number | null (revealed when scoreUpdate arrives)
+  // disabled: lock after I submit
 
-    // Handle when user selects an answer 
-    const handleSelect = (option) => {
-        if (isAnswered) return;
+  const pickedStyle = { backgroundColor: "#eef5ff" };
+  const correctStyle = { backgroundColor: "#28a745", color: "#fff" };
+  const wrongStyle = { backgroundColor: "#dc3545", color: "#fff" };
 
-        setSelectedOption(option);
-        setIsAnswered(true);
-        onAnswer(option); // tell Game.jsx what was selected
-    };
+  const [localPick, setLocalPick] = React.useState(null);
+  React.useEffect(() => setLocalPick(null), [question?.qid]);
 
-    // Button styles depending on status
-    const getButtonStyle = (option) => {
-        if (!isAnswered) return {};
+  const click = (idx) => {
+    if (disabled) return;
+    setLocalPick(idx);
+    onSelect?.(idx);
+  };
 
-        if (option === question.correct) {
-            return { backgroundColor: "#28a745", color: "white" }; // Green = Correct
-        }
+  return (
+    <div style={{ border: "1px solid #ccc", padding: "1.5rem", borderRadius: 8, background: "#fff" }}>
+      <h3 style={{ marginBottom: 16 }}>{question.text}</h3>
 
-        if (option === selectedOption) {
-            return { backgroundColor: "#dc3545", color: "white" }; // Red = Wrong
-        }
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        {question.choices.map((opt, idx) => {
+          // style rules:
+          // - after reveal (correctIndex != null):
+          //   * correctIndex green
+          //   * my wrong pick red
+          // - before reveal:
+          //   * just highlight my selection lightly
+          let style = {};
+          if (typeof correctIndex === "number") {
+            if (idx === correctIndex) style = correctStyle;
+            else if (localPick === idx) style = wrongStyle;
+          } else if (localPick === idx) {
+            style = pickedStyle;
+          }
 
-        return { backgroundColor: "#eee" }; // Gray = Neutral
-    };
-
-    return (
-        <div style={{ 
-            border: '1px solid #ccc', 
-            padding: '1.5rem',
-            borderRadius: '8px',
-            backgroundColor: '#fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.3rem' }}>
-                {question.text}
-            </h3>
-            
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-                {question.options.map((option, index) => (
-                    <li key={index} style={{ margin: '0.75rem 0' }}>
-                        <button
-                            onClick={() => handleSelect(option)}
-                            style={{
-                                padding: '0.75rem 1rem',
-                                border: '2px solid #ddd',
-                                borderRadius: '8px',
-                                width: '100%',
-                                cursor: isAnswered ? 'default' : 'pointer',
-                                fontSize: '1rem',
-                                textAlign: 'left',
-                                transition: 'all 0.2s ease',
-                                ...getButtonStyle(option),
-                            }}
-                            disabled={isAnswered}
-                        >
-                            {option}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-
-            {isAnswered && (
-                <div style={{ marginTop: '1.5rem' }}>
-                    <div style={{ 
-                        padding: '1rem',
-                        borderRadius: '6px',
-                        backgroundColor: selectedOption === question.correct ? '#d4edda' : '#f8d7da',
-                        border: `1px solid ${selectedOption === question.correct ? '#c3e6cb' : '#f5c6cb'}`,
-                        marginBottom: '1rem',
-                        textAlign: 'center'
-                    }}>
-                        <strong>
-                            {selectedOption === question.correct ? 
-                                '🎉 Correct!' : 
-                                `❌ Wrong! The correct answer was: ${question.correct}`
-                            }
-                        </strong>
-                    </div>
-                    
-                    <button
-                        onClick={onNext}
-                        style={{
-                            width: '100%',
-                            padding: '0.75rem 1rem',
-                            fontSize: '1.1rem',
-                            backgroundColor: '#007bff',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-                        onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
-                    >
-                        {isLast ? "🏁 Finish Quiz" : "➡️ Next Question"}
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+          return (
+            <li key={idx} style={{ margin: "0.5rem 0" }}>
+              <button
+                onClick={() => click(idx)}
+                disabled={disabled || typeof correctIndex === "number"}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "0.9rem 1rem",
+                  borderRadius: 10,
+                  border: "2px solid #ddd",
+                  cursor: disabled || typeof correctIndex === "number" ? "default" : "pointer",
+                  ...style,
+                }}
+              >
+                {opt}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
-
-export default QuestionCard;

@@ -6,44 +6,49 @@ import PlayerList from "../components/lobby/PlayerList";
 import LobbyControls from "../components/lobby/LobbyControls";
 
 export default function WaitingRoom() {
-  const { code } = useParams();                 // room code from URL
+  const { code } = useParams();                  // room code from URL
   const navigate = useNavigate();
-  const socket = useSocket();
+  const socket = useSocket();                    // expects plain socket from provider
 
   const [players, setPlayers] = useState([]);
   const [isHost, setIsHost] = useState(false);
   const [youReady, setYouReady] = useState(false);
   const [status, setStatus] = useState("");
-  const mounted = useRef(true);
+  const mounted = useRef(false);
+  const navigated = useRef(false);               // prevent double navigation
 
   useEffect(() => {
     mounted.current = true;
 
     const onConnect = () => setStatus("Connected to lobby server");
     const onDisconnect = () => setStatus("Disconnected");
+    const onConnectError = (err) =>
+      setStatus(`Connection error: ${err?.message || "Unknown error"}`);
 
     // keep local state in sync with server list
     const onLobbyUpdate = (payload) => {
       if (!mounted.current) return;
       const list = Array.isArray(payload) ? payload : payload?.players || [];
       setPlayers(list);
-      const me = list.find((p) => p.id === socket.id);
+
+      // identify "me" by socket.id (server should send each player with id === socket.id)
+      const me = list.find((p) => p.id === socket.id || p.socketId === socket.id);
       setIsHost(!!me?.isHost);
       setYouReady(!!me?.isReady);
     };
 
-    const onGameStarted = () => {
-      // move both host & players into game route for this room
-      navigate(`/game/${code}`);
+    // move both host & players into game route for this room
+    const onGameStarted = ({ roomCode }) => {
+      if (navigated.current) return;
+      navigated.current = true;
+      navigate(`/game/${roomCode || code}`);
     };
-
-    const onConnectError = (err) => setStatus(`Connection error: ${err.message}`);
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("lobby-update", onLobbyUpdate);
-    socket.on("game-started", onGameStarted);
     socket.on("connect_error", onConnectError);
+    socket.on("lobby-update", onLobbyUpdate);
+    socket.on("game-started", ({ roomCode }) => navigate(`/game/${roomCode}`));
 
     // ask server for the current room snapshot (refresh/direct link)
     socket.emit("sync-lobby", { lobbyCode: code });
@@ -52,17 +57,17 @@ export default function WaitingRoom() {
       mounted.current = false;
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
       socket.off("lobby-update", onLobbyUpdate);
       socket.off("game-started", onGameStarted);
-      socket.off("connect_error", onConnectError);
     };
   }, [socket, code, navigate]);
 
   const copyCode = async () => {
     try {
-      await navigator.clipboard.writeText(code.toUpperCase());
+      await navigator.clipboard.writeText(String(code || "").toUpperCase());
       setStatus("Lobby code copied!");
-      setTimeout(() => setStatus(""), 1200);
+      setTimeout(() => mounted.current && setStatus(""), 1200);
     } catch {
       setStatus("Could not copy lobby code");
     }
@@ -78,15 +83,15 @@ export default function WaitingRoom() {
   const startGame = () => {
     if (!isHost) return;
     socket.emit("start-game", { lobbyCode: code }, (res) => {
-      // server will emit 'game-started' on success; we show any guard errors here
+      // server will emit 'game-started' on success; show guard errors here
       if (res?.error) setStatus(res.error); // e.g. "Need at least 2 players" / "All players must be ready"
     });
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: "3rem auto", textAlign: "center" }}>
+    <div style={{ maxWidth: 480, margin: "3rem auto", textAlign: "center" }}>
       <h2>⏳ Waiting Room</h2>
-      <p>Share this code with friends and get everyone ready.</p>
+      <p>Share this code and get everyone ready.</p>
 
       {/* status / errors */}
       <div style={{ fontSize: 12, opacity: 0.75, minHeight: 18, marginBottom: 8 }}>
@@ -95,7 +100,7 @@ export default function WaitingRoom() {
 
       {/* room code + start button (host only) */}
       <LobbyControls
-        code={code.toUpperCase()}
+        code={String(code || "").toUpperCase()}
         onCopy={copyCode}
         isHost={isHost}
         onStart={startGame}
