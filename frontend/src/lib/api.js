@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
+const API_URL = process.env.REACT_APP_API_URL || window.location.origin + "/api";
 
 export async function api(path, opts = {}) {
   const res = await fetch(`${API_URL}${path}`, {

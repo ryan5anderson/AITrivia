@@ -23,7 +23,7 @@ class QuestionStorage {
     }
 
     // Store questions in both database and JSON file
-    async storeQuestions(topic, questions, difficulty = 'medium') {
+    async storeQuestions(topic, questions, difficulty = 'medium', userId) {
         const timestamp = new Date().toISOString();
         const topicNormalized = topic.toLowerCase().replace(/[^a-z0-9]/g, '_');
         
@@ -34,9 +34,9 @@ class QuestionStorage {
                     console.log(`DB: inserting ${questions.length} questions for topic "${topic}" (difficulty=${difficulty})`);
                     const dbPromises = questions.map(q => 
                         pool.query(
-                            `INSERT INTO questions (topic, question_text, choices, correct_answer, difficulty) 
-                             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-                            [topic, q.question, JSON.stringify(q.choices), q.correctAnswer, difficulty]
+                            `INSERT INTO questions (topic, question_text, choices, correct_answer, difficulty, created_by) 
+                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+                            [topic, q.question, JSON.stringify(q.choices), q.correctAnswer, difficulty, userId] // Pass userId here
                         )
                     );
                     const dbResults = await Promise.all(dbPromises);
@@ -59,7 +59,8 @@ class QuestionStorage {
                 difficulty,
                 createdAt: timestamp,
                 usageCount: 0,
-                lastUsed: null
+                lastUsed: null,
+                createdBy: 'local' // or 'supabase' based on the source
             }));
             
             const filename = `${topicNormalized}_${Date.now()}.json`;
@@ -208,7 +209,8 @@ class QuestionStorage {
                             question: q.question,
                             choices: q.choices,
                             correctAnswer: q.correctAnswer,
-                            difficulty: q.difficulty ?? 'medium'
+                            difficulty: q.difficulty ?? 'medium',
+                            createdBy: 'local' // or 'supabase' based on the source
                         });
                         if (picked.length >= count) return picked;
                     }

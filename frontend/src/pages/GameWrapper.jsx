@@ -110,6 +110,21 @@ export default function GameWrapper() {
         };
     }, [socket, urlCode, navigate]);
 
+    useEffect(() => {
+        if (!socket) return;
+
+        const updateUserGameplay = (payload = {}) => {
+            const { uid, gamesPlayed, numberOfWins } = payload;
+            // Update user gameplay data here, e.g., send to backend or update state
+        };
+
+        socket.on("updateUserGameplay", updateUserGameplay);
+
+        return () => {
+            socket.off("updateUserGameplay", updateUserGameplay);
+        };
+    }, [socket]);
+
     // not picker: waiting view
     if ((phase === "topic" || phase === "waitingTopic") && pickerSocketId && pickerSocketId !== socket?.id) {
         return <div style={{ padding: "2rem", textAlign: "center", opacity: 0.85 }}>

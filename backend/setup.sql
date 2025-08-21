@@ -21,4 +21,4 @@ CREATE TABLE questions(
 
 -- Index for faster topic lookups
 CREATE INDEX idx_questions_topic ON questions(topic);
-CREATE INDEX idx_questions_created_at ON questions(created_at); 
+CREATE INDEX idx_questions_created_at ON questions(created_at);

@@ -123,7 +123,7 @@ function ctrlStartGame({ code }) {
   if (!room) return { error: "Room not found" };
   const list = room.order.map((sid) => room.players[sid]).filter(Boolean);
   const connected = list.filter((p) => p.connected);
-  if (connected.length < 2) return { error: "Need at least 2 players" };
+  if (connected.length < 1) return { error: "Need at least 1 player" };
   if (!list.every((p) => p.isReady)) return { error: "All players must be ready" };
 
   room.state = "topic";

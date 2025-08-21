@@ -6,8 +6,7 @@ const SocketCtx = createContext(null);
 
 export function SocketProvider({ children }) {
   // CRA envs live on process.env.REACT_APP_*
-  const SOCKET_URL =
-    process.env.REACT_APP_SOCKET_URL?.trim() || "http://localhost:8080";
+  const SOCKET_URL = process.env.REACT_APP_SOCKET_URL?.trim() || window.location.origin;
 
   const socket = useMemo(() => {
     const s = io(SOCKET_URL, {

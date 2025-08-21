@@ -1,7 +1,7 @@
 {
   "scripts": {
     "setup": "psql --username postgres -f setup.sql; node dummy.js",
-    "start": "node server.js",
+    "start": "node app/server.js",
     "db:check": "node scripts/db-health-check.js"
   },
   "dependencies": {

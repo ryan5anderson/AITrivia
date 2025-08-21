@@ -13,22 +13,26 @@ const { Server } = require("socket.io");
 const pool = require("../db");                              // shared DB pool
 const apiRoutes = require("../routes");                     // unified REST routes
 const lobbySockets = require("../sockets/lobbySockets");    // socket handlers
+const config = require(path.join(__dirname, "..", "config"));
 
 const hostname = process.env.HOST || "0.0.0.0";
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
 const isProduction = process.env.NODE_ENV === "production";
-const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-const socketPath = process.env.SOCKET_PATH || "/socket.io";
+const frontendOrigin = config.frontendOrigin;
+const socketPath = config.socketPath;
 
 const app = express();
 
 // ---------- CORS ----------
-app.use(
-  cors({
-    origin: frontendOrigin,            
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+};
+app.use(cors({
+  origin: config.cors.origins || true,
+  credentials: true,
+}));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -67,15 +71,16 @@ app.get(/^(?!\/api).*/, (_req, res) => {
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  path: socketPath,
+  path: '/socket.io',
   cors: {
-    origin: frontendOrigin,
+    origin: config.cors.origins || true,
+    methods: ['GET', 'POST'],
     credentials: true,
   },
   transports: ["websocket"],           // avoid xhr-polling issues in dev
 });
 
-console.log("[server] Socket.IO attached", { socketPath, frontendOrigin });
+console.log("[server] Socket.IO attached", { socketPath, origins: config.cors.origins });
 
 io.engine.on("connection_error", (err) => {
   console.log("[io] engine connection_error:", {
@@ -118,7 +123,8 @@ app.post("/create", async (req, res) => {
   const { username, password } = body;
   try {
     const hash = await argon2.hash(password);
-    await pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [username, hash]);
+    const uid = crypto.randomUUID();
+    await pool.query("INSERT INTO users (uid, username, password, gamesplayed, numberofwins, email) VALUES ($1, $2, $3, $4, $5, $6)", [uid, username, hash, 0, 0, '']);
     return res.status(200).send();
   } catch (e) {
     console.log("User create failed:", e.message);
@@ -132,15 +138,15 @@ app.post("/login", async (req, res) => {
 
   const { username, password } = body;
   try {
-    const result = await pool.query("SELECT password FROM users WHERE username = $1", [username]);
+    const result = await pool.query("SELECT uid, password FROM users WHERE username = $1", [username]);
     if (result.rows.length === 0) return res.sendStatus(400);
 
-    const hash = result.rows[0].password;
+    const { uid, password: hash } = result.rows[0];
     const ok = await argon2.verify(hash, password);
     if (!ok) return res.sendStatus(400);
 
     const token = makeToken();
-    tokenStorage[token] = username;
+    tokenStorage[token] = { username, uid };
     return res.cookie("token", token, cookieOptions).send();
   } catch (e) {
     console.log("Login failed:", e.message);
@@ -169,8 +175,8 @@ app.get("/public", (_req, res) => res.send("A public message\n"));
 app.get("/private", authorize, (_req, res) => res.send("A private message\n"));
 
 // ---------- Start server ----------
-server.listen(port, hostname, () => {
-  console.log(`Listening on http://${hostname}:${port} (frontend: ${frontendOrigin})`);
+server.listen(config.port, config.host, () => {
+  console.log(`Server listening on ${config.port}`);
 });
 
 // Early DB connection check (non-fatal)

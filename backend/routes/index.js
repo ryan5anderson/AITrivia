@@ -5,6 +5,7 @@ const router = express.Router();
 const { ctrlGetRoomSnapshot } = require("../controllers/lobbyController");
 const openai = require("../controllers/openaiController");
 const questions = require("../controllers/questionsController");
+const { getUserData } = require('../controllers/userController');
 
 /**
  * Debug/admin:
@@ -27,5 +28,10 @@ router.post("/generate-questions", openai.getTriviaQuestions);
  */
 router.post("/questions/cached", questions.getCachedQuestions);
 router.get("/questions/stats/:topic", questions.getTopicStats);
+
+/**
+ * User Data
+ */
+router.get('/user/data', getUserData);
 
 module.exports = router;

@@ -84,7 +84,7 @@ export default function WaitingRoom() {
     if (!isHost) return;
     socket.emit("start-game", { lobbyCode: code }, (res) => {
       // server will emit 'game-started' on success; show guard errors here
-      if (res?.error) setStatus(res.error); // e.g. "Need at least 2 players" / "All players must be ready"
+      if (res?.error && res.error !== "Need at least 1 player") setStatus(res.error); // e.g. "Need at least 2 players" / "All players must be ready"
     });
   };
 
