@@ -26,7 +26,7 @@ pool.connect().then(async (client) => {
     }
 
     try {
-      await client.query("INSERT INTO users (uid, username, password, gamesplayed, numberofwins, email) VALUES ($1, $2, $3, $4, $5, $6)", [crypto.randomUUID(), username, hash, 0, 0, '']);
+      await client.query("INSERT INTO users (uid, username, password, games_played, wins, email) VALUES ($1, $2, $3, $4, $5, $6)", [crypto.randomUUID(), username, hash, 0, 0, '']);
     } catch (error) {
       console.log(`Error when INSERTING '${username}', '${hash}':`, error);
     }

@@ -124,7 +124,7 @@ app.post("/create", async (req, res) => {
   try {
     const hash = await argon2.hash(password);
     const uid = crypto.randomUUID();
-    await pool.query("INSERT INTO users (uid, username, password, gamesplayed, numberofwins, email) VALUES ($1, $2, $3, $4, $5, $6)", [uid, username, hash, 0, 0, '']);
+    await pool.query("INSERT INTO users (uid, username, password, games_played, wins, email) VALUES ($1, $2, $3, $4, $5, $6)", [uid, username, hash, 0, 0, '']);
     return res.status(200).send();
   } catch (e) {
     console.log("User create failed:", e.message);

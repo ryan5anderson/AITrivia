@@ -2,9 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FaUserCircle } from 'react-icons/fa';
+import { loadMe } from '../services/profile';
 
 function AuthHeader() {
     const [session, setSession] = useState(null);
+    const [profile, setProfile] = useState({ name: '', email: '', wins: 0, games_played: 0 });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
     const [showPopup, setShowPopup] = useState(false);
 
@@ -17,6 +21,20 @@ function AuthHeader() {
             listener.subscription.unsubscribe();
         };
     }, []);
+
+    useEffect(() => {
+        if (session) {
+            loadMe()
+                .then(data => {
+                    setProfile(data);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    setError(err.message);
+                    setLoading(false);
+                });
+        }
+    }, [session]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
@@ -47,10 +65,18 @@ function AuthHeader() {
                 </div>
                 {showPopup && (
                     <div style={{ position: 'absolute', top: '50px', right: '10px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px', padding: '1rem', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-                        <p>Name: {session.user.name}</p>
-                        <p>Email: {session.user.email}</p>
-                        <p>Wins: {session.user.wins}</p>
-                        <p>Games Played: {session.user.gamesPlayed}</p>
+                        {loading ? (
+                            <p>Loading...</p>
+                        ) : error ? (
+                            <p>Error: {error}</p>
+                        ) : (
+                            <>
+                                <p>Name: {profile.name}</p>
+                                <p>Email: {profile.email}</p>
+                                <p>Wins: {profile.wins}</p>
+                                <p>Games Played: {profile.games_played}</p>
+                            </>
+                        )}
                         <button onClick={handleSignOut} style={{ marginTop: '1rem', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#f8f9fa', cursor: 'pointer' }}>Sign Out</button>
                     </div>
                 )}

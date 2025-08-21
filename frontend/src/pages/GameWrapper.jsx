@@ -114,7 +114,7 @@ export default function GameWrapper() {
         if (!socket) return;
 
         const updateUserGameplay = (payload = {}) => {
-            const { uid, gamesPlayed, numberOfWins } = payload;
+            const { uid, games_played, wins } = payload;
             // Update user gameplay data here, e.g., send to backend or update state
         };
 
