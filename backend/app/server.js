@@ -1,3 +1,4 @@
+// app/server.js
 require("dotenv").config();
 
 const path = require("path");
@@ -9,42 +10,41 @@ const crypto = require("crypto");
 const argon2 = require("argon2");
 const { Server } = require("socket.io");
 
-const pool = require("../db");                       // shared DB pool
-const apiRoutes = require("../routes"); // unified REST routes
-const lobbySockets = require("../sockets/lobbySockets"); // socket handlers
+const pool = require("../db");                              // shared DB pool
+const apiRoutes = require("../routes");                     // unified REST routes
+const lobbySockets = require("../sockets/lobbySockets");    // socket handlers
 
-const hostname = "0.0.0.0";
+const hostname = process.env.HOST || "0.0.0.0";
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
 const isProduction = process.env.NODE_ENV === "production";
+const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+const socketPath = process.env.SOCKET_PATH || "/socket.io";
 
 const app = express();
-const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
-// CORS: wide-open in dev; same-origin in prod
-if (!isProduction) {
-  app.use(
-    cors({
-      origin: frontendOrigin,
-      credentials: true,
-    })
-  );
-}
+// ---------- CORS ----------
+app.use(
+  cors({
+    origin: frontendOrigin,            
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Dev logging
+// ---------- Dev logging ----------
 app.use((req, _res, next) => {
   console.log(`📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
   if (Object.keys(req.body || {}).length) console.log("Body:", req.body);
   next();
 });
 
-// Static (for production SPA bundle)
+// ---------- Static (for production SPA bundle) ----------
 const publicDir = path.join(__dirname, "..", "public");
 app.use(express.static(publicDir));
 
-// Health checks
+// ---------- Health checks ----------
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/health/db", async (_req, res) => {
   try {
@@ -55,25 +55,27 @@ app.get("/health/db", async (_req, res) => {
   }
 });
 
-// ------- REST API (mount under /api) -------
+// ---------- REST API (mount under /api) ----------
 app.use("/api", apiRoutes);
 
-// SPA catch‑all (exclude /api/*)
+// ---------- SPA catch‑all (exclude /api/*) ----------
 app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
-// ------- HTTP server + Socket.IO -------
+// ---------- HTTP server + Socket.IO ----------
 const server = http.createServer(app);
+
 const io = new Server(server, {
+  path: socketPath,
   cors: {
-    origin: isProduction ? 
-    true : frontendOrigin, 
+    origin: frontendOrigin,
     credentials: true,
   },
+  transports: ["websocket"],           // avoid xhr-polling issues in dev
 });
 
-console.log("[server] Socket.IO attached");
+console.log("[server] Socket.IO attached", { socketPath, frontendOrigin });
 
 io.engine.on("connection_error", (err) => {
   console.log("[io] engine connection_error:", {
@@ -85,28 +87,27 @@ io.engine.on("connection_error", (err) => {
 
 io.on("connection", (s) => {
   console.log("[io] connected", s.id, "ua:", s.handshake.headers["user-agent"]);
-  s.on("disconnect", (reason) => console.log("[io] disconnected", s.id, "reason:", reason));
+  s.on("disconnect", (reason) =>
+    console.log("[io] disconnected", s.id, "reason:", reason)
+  );
 });
 
 // Attach socket namespaces/handlers
 lobbySockets(io);
 
-// ------- Simple demo auth (cookie token in memory) -------
+// ---------- Simple demo auth  ----------
 const tokenStorage = Object.create(null);
-
 function makeToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
-// IMPORTANT: secure only in prod so cookies work on localhost
 const cookieOptions = {
   httpOnly: true,
-  secure: isProduction,
+  secure: isProduction,      // secure only in prod so cookies work on localhost
   sameSite: "strict",
 };
 
 function validateLogin(body) {
-  // TODO: real validation
   return body && typeof body.username === "string" && typeof body.password === "string";
 }
 
@@ -118,7 +119,6 @@ app.post("/create", async (req, res) => {
   try {
     const hash = await argon2.hash(password);
     await pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [username, hash]);
-    // Optionally auto-login
     return res.status(200).send();
   } catch (e) {
     console.log("User create failed:", e.message);
@@ -168,12 +168,12 @@ app.post("/logout", (req, res) => {
 app.get("/public", (_req, res) => res.send("A public message\n"));
 app.get("/private", authorize, (_req, res) => res.send("A private message\n"));
 
-// ------- Start server -------
+// ---------- Start server ----------
 server.listen(port, hostname, () => {
-  console.log(`Listening on ${port}`);
+  console.log(`Listening on http://${hostname}:${port} (frontend: ${frontendOrigin})`);
 });
 
-// Optional: early DB connection check (non-fatal)
+// Early DB connection check (non-fatal)
 pool
   .connect()
   .then((client) => {
@@ -183,3 +183,7 @@ pool
   .catch((err) => {
     console.log("Database connection failed (server continues):", err.message);
   });
+
+// Catch crashes
+process.on("uncaughtException", (e) => console.error("[fatal] uncaughtException:", e));
+process.on("unhandledRejection", (e) => console.error("[fatal] unhandledRejection:", e));
