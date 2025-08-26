@@ -37,7 +37,11 @@ const DEFAULTS = {
   REVEAL_MS: 1500,
   ROUND_QUESTIONS: 5,
   LEADERBOARD_MS: 3500,
+  // NEW: per-question speed bonus schedule (1st, 2nd, 3rd, …)
+  SPEED_BONUS_BY_PLACE: [3, 2, 1], // tweak as you like
+  BASE_POINTS_CORRECT: 1           // your existing “+1 for correct”
 };
+
 
 function ensureJobs(code) {
   if (!jobs.has(code)) jobs.set(code, { questionTimer: null, revealTimer: null });
@@ -93,11 +97,12 @@ function startQuestion(io, code, question) {
   if (!state) return;
 
   const ms = state.settings?.questionMs ?? DEFAULTS.QUESTION_MS;
-  const expiresAt = Date.now() + ms;
+  const now = Date.now();
+  const expiresAt = now + ms;
 
   state.phase = "question";
   state.revealed = false;
-  state.question = { ...question, expiresAt };
+  state.question = { ...question, startedAt: now, expiresAt }; // ← startedAt added
   state.submissions = new Map();
   state.totals = state.totals || new Map();
 
@@ -121,6 +126,9 @@ function finishQuestion(io, code, reason = "manual") {
   state.revealed = true;
 
   const correctIndex = state.question.correctIndex;
+  const basePoints = state.settings?.basePointsCorrect ?? DEFAULTS.BASE_POINTS_CORRECT;
+  const speedSchedule = state.settings?.speedBonusByPlace ?? DEFAULTS.SPEED_BONUS_BY_PLACE;
+
   console.log("[server] ⏱️ finishQuestion", {
     code,
     qid: state.question.qid,
@@ -129,11 +137,82 @@ function finishQuestion(io, code, reason = "manual") {
     reason,
   });
 
-  // Score only first answer per player
+  // Build an array of submissions
+  const subs = Array.from(state.submissions.entries()).map(([sid, s]) => ({
+    sid,
+    choiceIndex: Number(s.choiceIndex),
+    at: Number(s.at)
+  }));
+
+  // Determine correctness
+  const isCorrect = (choiceIndex) => Number(choiceIndex) === Number(correctIndex);
+
+  // Sort only correct submissions by arrival time (fastest first)
+  const correctSorted = subs
+    .filter((s) => isCorrect(s.choiceIndex))
+    .sort((a, b) => a.at - b.at);
+
+  // Map: playerId -> rank index (0-based)
+  const placeBySid = new Map();
+  correctSorted.forEach((s, idx) => placeBySid.set(s.sid, idx));
+
+  // Award points
+  state.totals = state.totals || new Map();
+  const perPlayer = []; // for optional detailed payload
+
+  // Score only first answer per player (your current behavior),
+  // plus speed bonus if correct
   for (const [sid, sub] of state.submissions.entries()) {
-    const isCorrect = Number(sub.choiceIndex) === Number(correctIndex);
+    const correct = isCorrect(sub.choiceIndex);
     const prev = state.totals.get(sid) ?? 0;
-    state.totals.set(sid, prev + (isCorrect ? 1 : 0));
+
+    let base = 0;
+    let bonus = 0;
+    if (correct) {
+      base = basePoints;
+      const place = placeBySid.get(sid); // 0 => first, 1 => second, ...
+      if (place !== undefined && place < speedSchedule.length) {
+        bonus = speedSchedule[place];
+      }
+      state.totals.set(sid, prev + base + bonus);
+    } else {
+      // incorrect → no score change
+      state.totals.set(sid, prev);
+    }
+
+    perPlayer.push({
+      id: sid,
+      name: (state.nameById && state.nameById[sid]) || sid.slice(0, 5),
+      answered: true,
+      correct,
+      receivedAt: sub.at,
+      base,
+      bonus,
+      awarded: base + bonus,
+      newTotal: state.totals.get(sid),
+      place: placeBySid.has(sid) ? (placeBySid.get(sid) + 1) : null, // human-readable 1st/2nd/3rd
+    });
+  }
+
+  // Include players who didn’t answer (so UI can show them)
+  const presentIds = new Set(subs.map((s) => s.sid));
+  const allIds = getRoomPlayerIds(io, code);
+  for (const sid of allIds) {
+    if (presentIds.has(sid)) continue;
+    const prev = state.totals.get(sid) ?? 0;
+    state.totals.set(sid, prev);
+    perPlayer.push({
+      id: sid,
+      name: (state.nameById && state.nameById[sid]) || sid.slice(0, 5),
+      answered: false,
+      correct: false,
+      receivedAt: null,
+      base: 0,
+      bonus: 0,
+      awarded: 0,
+      newTotal: prev,
+      place: null,
+    });
   }
 
   const leaderboard = makeLeaderboard(state);
@@ -143,6 +222,10 @@ function finishQuestion(io, code, reason = "manual") {
     leaderboard,
     correctIndex,
     qid: state.question.qid,
+    // NEW: extra info the client can ignore if not used
+    results: perPlayer,
+    speedSchedule,      // so the client can render “+3/+2/+1” legends
+    basePoints,         // so UI can show base+bonus breakdowns
   });
 
   const revealMs = state.settings?.revealMs ?? DEFAULTS.REVEAL_MS;
