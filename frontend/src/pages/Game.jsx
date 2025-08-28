@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import QuestionCard from "../components/QuestionCard";
 import Scoreboard from "../components/Scoreboard";
+import PhaseFrame from "../components/PhaseFrame";
 
 export default function Game({ question, code, socket }) {
   const [board, setBoard] = useState([]);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../realtime/SocketProvider";
+import PhaseFrame from "../components/PhaseFrame";
 
 export default function TopicSelect() {
   const { code: urlCode } = useParams();

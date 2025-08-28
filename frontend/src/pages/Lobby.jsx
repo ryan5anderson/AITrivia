@@ -6,6 +6,7 @@ import NameInput from "../components/lobby/NameInput";
 import HostForm from "../components/lobby/HostForm";
 import JoinForm from "../components/lobby/JoinForm";
 import { useSocket } from "../realtime/SocketProvider";
+import PhaseFrame from "../components/PhaseFrame";
 
 export default function Lobby() {
   const navigate = useNavigate();
