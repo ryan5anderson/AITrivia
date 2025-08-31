@@ -1,102 +1,44 @@
-import React, { useMemo } from "react";
+import React from "react";
 
-/**
- * players: Array<{ id: string, name: string, isHost?: boolean, number?: number }>
- * youId: socket.id of this client
- * isHostHere: convenience flag for current client (optional)
- */
-
-export default function PlayerList({ players = [], youId, isHostHere }) {
-  // Prefer server-provided numbers; otherwise assign by join order deterministically
-  const numbered = useMemo(() => {
-    // If players already have .number, respect it and sort by it
-    const hasNumbers = players.every(p => typeof p.number === "number");
-    if (hasNumbers) {
-      return [...players].sort((a, b) => a.number - b.number);
-    }
-    // Fallback: stable order from array index
-    return players.map((p, i) => ({ ...p, number: i + 1 }));
-  }, [players]);
+export default function PlayerList({ players = [], youId }) {
+  if (!players.length) {
+    return <p className="text-sm text-gray-500">No players yet…</p>;
+  }
 
   return (
-    <div
-      style={{
-        textAlign: "left",
-        margin: "1rem auto",
-        maxWidth: 420,
-        border: "1px solid #eee",
-        borderRadius: 10,
-        padding: "0.75rem",
-        background: "#fff",
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>Players</div>
-
-      {numbered.length === 0 ? (
-        <div style={{ opacity: 0.7 }}>No players yet.</div>
-      ) : (
-        <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-          {numbered.map((p) => {
-            const isYou = p.id === youId;
-            const isHost = !!p.isHost;
-
-            return (
-              <li
-                key={p.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  marginBottom: 6,
-                  background: isHost ? "#f3e8ff" : "#f9fafb", // host = soft purple, others = light gray
-                  border: isHost ? "1px solid #e9d5ff" : "1px solid #eee",
-                }}
-              >
-                {/* Number badge */}
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    minWidth: 28,
-                    display: "grid",
-                    placeItems: "center",
-                    borderRadius: "50%",
-                    fontWeight: 700,
-                    background: isHost ? "#7c3aed" : "#e5e7eb",
-                    color: isHost ? "#fff" : "#111827",
-                  }}
-                >
-                  {p.number}
+    <ul className="list-none m-0 p-0 divide-y divide-black/5 pb-2">
+      {players.map((p) => {
+        const isYou = p.id === youId || p.socketId === youId;
+        return (
+          <li
+            key={p.id}
+            className="flex items-center justify-between px-4 sm:px-5 py-2 hover:bg-black/5 transition"
+          >
+            {/* Left side */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-blue text-white font-semibold">
+                {p.name?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div>
+                <div className="font-medium text-gray-900">
+                  {p.name} {isYou && <span className="text-gray-500 text-sm">(you)</span>}
                 </div>
-
-                {/* Name + tags */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 600 }}>
-                    {p.name} {isYou ? <span style={{ opacity: 0.6 }}>(you)</span> : null}
-                  </span>
-
-                  {isHost && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        padding: "2px 8px",
-                        borderRadius: 999,
-                        background: "#7c3aed",
-                        color: "#fff",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Host
-                    </span>
-                  )}
+                <div className="text-xs text-gray-500">
+                  {p.isReady ? "Ready" : "Not ready"}
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+              </div>
+            </div>
+
+            {/* Right side: Host badge */}
+            {p.isHost && (
+              <span className="px-2 py-0.5 rounded-full bg-brand-orange/10 text-brand-orange text-xs font-medium">
+                Host
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+
   );
 }

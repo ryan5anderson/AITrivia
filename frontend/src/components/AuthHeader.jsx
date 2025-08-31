@@ -1,3 +1,4 @@
+// src/components/AuthHeader.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -29,17 +30,19 @@ export default function AuthHeader() {
       .finally(() => setLoading(false));
   }, [session]);
 
-  // click-outside / ESC
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target) && !btnRef.current.contains(e.target)) setOpen(false);
+      const m = menuRef.current, b = btnRef.current;
+      if (m && !m.contains(e.target) && (!b || !b.contains(e.target))) setOpen(false);
     };
     const onEsc = (e) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onEsc);
-    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
   }, [open]);
 
   const signOut = async () => {
@@ -51,57 +54,73 @@ export default function AuthHeader() {
   if (!session) return null;
 
   return (
-    <header className="sticky top-0 z-50 glass-strong border-b">
-      <div className="container-page row h-14">
-        <button onClick={() => navigate("/")} className="font-bold text-indigo-600 hover:opacity-80">
-          AI Trivia
-        </button>
-
-        <div className="relative">
+    <header className="sticky top-0 z-50 border-b">
+      {/* Glassy nav */}
+      <div className="card-glass">
+        <div className="container-page row h-14">
           <button
-            ref={btnRef}
-            onClick={() => setOpen((v) => !v)}
-            className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-black/5"
-            aria-haspopup="menu"
-            aria-expanded={open}
+            onClick={() => navigate("/")}
+            className="font-bold text-brand-orange hover:opacity-80"
           >
-            <FaUserCircle className="text-gray-700" size={22} />
+            AI Trivia
           </button>
 
-          {open && (
-            <div ref={menuRef} className="absolute right-0 top-12 w-72 card bg-white rounded-xl p-3 shadow-lg">
-              {loading ? (
-                <p className="text-sm text-gray-600 px-1 py-2">Loading…</p>
-              ) : err ? (
-                <p className="text-sm text-rose-600 px-1 py-2">Error: {err}</p>
-              ) : (
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-3">
-                    <FaUserCircle className="text-gray-700" size={24} />
-                    <div>
-                      <div className="font-medium">{profile.name || "Player"}</div>
-                      <div className="text-gray-500 truncate">{profile.email}</div>
+          <div className="relative">
+            <button
+              ref={btnRef}
+              onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-black/5 ring-focus"
+              aria-haspopup="menu"
+              aria-expanded={open}
+            >
+              <FaUserCircle className="text-gray-700" size={22} />
+            </button>
+
+            {open && (
+              <div
+                ref={menuRef}
+                className="absolute right-0 top-12 w-72 card bg-white rounded-xl p-3 shadow-card"
+                role="menu"
+              >
+                {loading ? (
+                  <p className="text-sm text-gray-600 px-1 py-2">Loading…</p>
+                ) : err ? (
+                  <p className="text-sm text-brand-orange px-1 py-2">Error: {err}</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <FaUserCircle className="text-gray-700" size={24} />
+                      <div>
+                        <div className="font-medium">{profile.name || "Player"}</div>
+                        <div className="text-gray-500 truncate">{profile.email}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="card p-2 text-center">
+                        <div className="text-gray-500 text-xs">Wins</div>
+                        <div className="font-semibold tabnums">{profile.wins ?? 0}</div>
+                      </div>
+                      <div className="card p-2 text-center">
+                        <div className="text-gray-500 text-xs">Games</div>
+                        <div className="font-semibold tabnums">{profile.games_played ?? 0}</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="card p-2 text-center">
-                      <div className="text-gray-500 text-xs">Wins</div>
-                      <div className="font-semibold tabnums">{profile.wins ?? 0}</div>
-                    </div>
-                    <div className="card p-2 text-center">
-                      <div className="text-gray-500 text-xs">Games</div>
-                      <div className="font-semibold tabnums">{profile.games_played ?? 0}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <button onClick={signOut} className="btn-second ring-focus w-full justify-center mt-3">
-                Sign Out
-              </button>
-            </div>
-          )}
+                )}
+                <button
+                  onClick={signOut}
+                  className="btn-second ring-focus w-full justify-center mt-3"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Brand stripe */}
+      <div className="h-1 bg-gradient-to-r from-[#EB773E] to-[#F7B301]" />
     </header>
   );
 }

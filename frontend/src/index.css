@@ -16,7 +16,6 @@ code {
     monospace;
 }
 
-/* ---------- Global polish (safe, minimal) ---------- */
 @layer base {
   html, body, #root { height: 100%; }
   body { background: #f8fafc; color: #0f172a; }
@@ -27,37 +26,54 @@ code {
   *, ::before, ::after { box-sizing: border-box; }
 }
 
-/* Reusable building blocks */
+/* Uses tailwind.config.js extend.colors.brand.{blue,cyan,yellow,orange} + neutral.border */
 @layer components {
-  .container-page { @apply max-w-5xl mx-auto px-4 py-6; }
-  .container-page-nopy { @apply max-w-5xl mx-auto px-4; }
+  .container-page     { @apply max-w-5xl mx-auto px-4 py-6; }
+  .container-page-nopy{ @apply max-w-5xl mx-auto px-4; }
 
-  .card       { @apply rounded-2xl border border-black/5 bg-white shadow p-4; }
-  .card-glass { @apply rounded-2xl border border-black/5 bg-white/90 backdrop-blur shadow p-4; }
+  /* Cards */
+  .card               { @apply rounded-2xl border border-neutral-border bg-white shadow-card p-4; }
+  .card-glass         { @apply rounded-2xl border border-neutral-border bg-white/80 backdrop-blur shadow-card p-6; }
 
-  .row        { @apply flex items-center justify-between; }
+  /* Rows / pills */
+  .row                { @apply flex items-center justify-between; }
+  .pill               { @apply inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 bg-white shadow; }
 
-  .btn        { @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium shadow transition active:scale-95; }
-  .btn-primary{ @apply btn bg-indigo-600 text-white hover:bg-indigo-700; }
-  .btn-second { @apply btn border border-black/10 bg-white hover:bg-black/5; }
+  /* Buttons */
+  .btn                { @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium shadow transition active:scale-95; }
+  .btn-primary        { @apply btn bg-brand-blue text-white hover:bg-[#145391]; } /* slightly darker hover */
+  .btn-second         { @apply btn border border-neutral-border bg-white hover:bg-black/5; }
 
-  .pill       { @apply inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 bg-white shadow; }
+  /* Inputs */
+  .input              { @apply box-border w-full rounded-xl border border-neutral-border bg-white px-3 py-2 shadow; }
 
-  .input         { @apply box-border w-full rounded-xl border border-black/10 bg-white px-3 py-2 shadow; }
-  .glass         { @apply bg-white/40 backdrop-blur-md border border-white/20 shadow; }
-  .glass-strong  { @apply bg-white/50 backdrop-blur-xl border border-white/25 shadow; }
-  .card-glass    { @apply rounded-2xl border border-white/25 bg-white/60 backdrop-blur-lg shadow-card p-6; }
+  /* Answer states */
+  .state-select       { @apply bg-brand-cyan/30 border border-brand-cyan; }
+  .state-correct      { @apply bg-brand-yellow/20 border border-brand-yellow; }
+  .state-wrong        { @apply bg-brand-orange/20 border border-brand-orange text-brand-orange; }
+  .state-locked       { @apply bg-gray-50 border border-neutral-border opacity-75; }
+
+  /* Status pills */
+  .pill-ok            { @apply pill border-brand-cyan/50   bg-brand-cyan/20   text-brand-blue; }
+  .pill-warn          { @apply pill border-brand-yellow/60 bg-brand-yellow/20 text-brand-yellow; }
+  .pill-err           { @apply pill border-brand-orange/60 bg-brand-orange/15 text-brand-orange; }
 }
 
-/* Handy utilities */
 @layer utilities {
   .center-viewport { @apply min-h-[calc(100vh-3.5rem)] flex items-center justify-center; }
   .center-screen   { @apply min-h-screen flex items-center justify-center; }
-  .tabnums    { font-variant-numeric: tabular-nums; }
-  .ring-focus { @apply focus-visible:ring-2 focus-visible:ring-indigo-500; }
-  .section    { @apply mt-6; }
-  .hero-bg    { @apply bg-gradient-to-b from-white to-indigo-50; }
-  .hero-shift { @apply -translate-y-8; }
-  .page-bg { @apply bg-gradient-to-b from-white via-indigo-50/40 to-white; }
+
+  .tabnums         { font-variant-numeric: tabular-nums; }
+  .tabular-nums    { font-variant-numeric: tabular-nums; }
+
+  .ring-focus      { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan; }
+  .tap-target      { min-height: 44px; }
+
+  /* Backgrounds */
+  .hero-bg         { @apply bg-gradient-to-b from-white to-brand-cyan/10; }
+  .page-bg         { @apply bg-gradient-to-b from-white via-brand-cyan/10 to-white; }
 }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
 

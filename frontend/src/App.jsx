@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -10,7 +11,8 @@ import GameWrapper from './pages/GameWrapper';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import AuthHeader from './components/AuthHeader';
-import { SocketProvider } from './realtime/SocketProvider'; 
+import { SocketProvider } from './realtime/SocketProvider';
+import ToastHost from './components/ToastHost'; // <-- add
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -29,16 +31,9 @@ function App() {
     };
   }, []);
 
-  if (!authChecked) {
-    return null;
-  }
+  if (!authChecked) return null;
 
-  const PrivateRoute = ({ children }) => {
-    if (!session) {
-      return <Navigate to="/" replace />;
-    }
-    return children;
-  };
+  const PrivateRoute = ({ children }) => (!session ? <Navigate to="/" replace /> : children);
 
   const Layout = () => (
     <div>
@@ -49,25 +44,19 @@ function App() {
 
   return (
     <Router>
-      <SocketProvider> 
+      <SocketProvider>
+        {/* Toasts visible on all routes */}
+        <ToastHost />
         <Routes>
           <Route element={<Layout />}>
-            <Route
-              path="/"
-              element={session ? <Navigate to="/user-home" replace /> : <Home />}
-            />
-
-            {/* User Home */}
+            <Route path="/" element={session ? <Navigate to="/user-home" replace /> : <Home />} />
             <Route path="/user-home" element={<PrivateRoute><UserHome /></PrivateRoute>} />
-
-            {/* Multiplayer (Socket.IO) */}
             <Route path="/lobby" element={<PrivateRoute><Lobby /></PrivateRoute>} />
             <Route path="/waiting/:code" element={<PrivateRoute><WaitingRoom /></PrivateRoute>} />
             <Route path="/game/:code" element={<PrivateRoute><GameWrapper /></PrivateRoute>} />
             <Route path="/topic-select/:code" element={<PrivateRoute><TopicSelect/></PrivateRoute>} />
+          
           </Route>
-
-          {/* Authentication Pages */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Routes>

@@ -1,7 +1,7 @@
+// src/pages/TopicSelect.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../realtime/SocketProvider";
-import PhaseFrame from "../components/PhaseFrame";
 
 export default function TopicSelect() {
   const { code: urlCode } = useParams();
@@ -9,12 +9,15 @@ export default function TopicSelect() {
   const socket = useSocket();
 
   const roomCodeRef = useRef(urlCode || "");
-  useEffect(() => { if (urlCode) roomCodeRef.current = urlCode; }, [urlCode]);
+  useEffect(() => {
+    if (urlCode) roomCodeRef.current = urlCode;
+  }, [urlCode]);
 
   const [topic, setTopic] = useState("");
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // keep phase in sync—if someone else is picker, or phase advances, send us to game
   useEffect(() => {
     if (!socket) return;
 
@@ -40,7 +43,6 @@ export default function TopicSelect() {
 
     socket.on("phase", onPhase);
     socket.on("newQuestion", onNewQuestion);
-
     socket.emit("sync-game", { lobbyCode: roomCodeRef.current || urlCode });
 
     return () => {
@@ -58,9 +60,8 @@ export default function TopicSelect() {
     setStatus("Sending topic…");
     const rc = (roomCodeRef.current || urlCode || "").toUpperCase();
 
-    console.log("[client] emitting pickTopic", { lobbyCode: rc, topic: t, my: socket.id });
     socket.emit("pickTopic", { lobbyCode: rc, topic: t }, (res) => {
-      if (res && res.error) {
+      if (res?.error) {
         setStatus("Could not start round. Try again.");
         setSubmitting(false);
       } else {
@@ -70,55 +71,64 @@ export default function TopicSelect() {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 600, margin: "0 auto", textAlign: "center" }}>
-      <h2>📚 Choose Your Topic</h2>
-      <p style={{ marginBottom: "1rem", color: "#666" }}>Enter any topic you’d like to be quizzed on.</p>
+    <div className="min-h-[calc(100vh-3.5rem)] page-bg flex items-center justify-center px-4">
+      <div className="card-glass w-full max-w-xl">
+        {/* Header row */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">📚 Choose a Topic</h2>
+            <p className="text-gray-600 mt-1">
+              Enter any topic you’d like to be quizzed on.
+            </p>
+          </div>
 
-      <div style={{ marginBottom: "0.75rem" }}>
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !submitting && submit()}
-          placeholder="e.g., NBA history, World War II, Taylor Swift…"
-          disabled={submitting}
-          style={{
-            width: "100%", padding: "1rem", fontSize: "1.1rem",
-            border: "2px solid #ddd", borderRadius: 8, outline: "none", boxSizing: "border-box",
-            opacity: submitting ? 0.7 : 1,
-          }}
-          onFocus={(e) => (e.target.style.borderColor = "#007bff")}
-          onBlur={(e) => (e.target.style.borderColor = "#ddd")}
-        />
-      </div>
+          <div className="flex items-center gap-2">
+            <span className="pill tabnums">
+              {(roomCodeRef.current || urlCode || "").toUpperCase() || "—"}
+            </span>
+          </div>
+        </div>
 
-      <div style={{ minHeight: 18, fontSize: 12, color: "#888", marginBottom: 12 }}>{status}</div>
+        {/* Form */}
+        <div className="mt-5 space-y-3">
+          <label className="block">
+            <span className="text-sm font-medium">Topic</span>
+            <input
+              type="text"
+              className="input ring-focus mt-1 h-12 text-base"
+              placeholder="e.g., NBA history, World War II, Taylor Swift…"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !submitting && submit()}
+              disabled={submitting}
+            />
+          </label>
 
-      <button
-        onClick={submit}
-        disabled={!topic.trim() || submitting}
-        style={{
-          padding: "0.9rem 1.6rem", fontSize: "1.1rem",
-          backgroundColor: topic.trim() && !submitting ? "#007bff" : "#ccc",
-          color: "#fff", border: "none", borderRadius: 8,
-          cursor: topic.trim() && !submitting ? "pointer" : "not-allowed",
-          transition: "background-color 0.2s",
-        }}
-      >
-        {submitting ? "Generating…" : "Confirm Topic 🎮"}
-      </button>
+          {/* Status line */}
+          <div className="min-h-5 text-xs text-gray-500">
+            {status || "Tip: Be as specific as you like for spicier questions."}
+          </div>
 
-      <div style={{ marginTop: 12 }}>
-        <button
-          onClick={() => navigate(`/game/${roomCodeRef.current || urlCode}`, { replace: true })}
-          style={{
-            fontSize: 13, background: "transparent", border: "none",
-            color: "#666", cursor: "pointer", textDecoration: "underline",
-          }}
-          disabled={submitting}
-        >
-          Cancel and return to game
-        </button>
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <button
+              onClick={submit}
+              disabled={!topic.trim() || submitting}
+              className="btn-primary ring-focus h-11 justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Generating…" : "Confirm Topic 🎮"}
+            </button>
+            <button
+              onClick={() =>
+                navigate(`/game/${roomCodeRef.current || urlCode}`, { replace: true })
+              }
+              disabled={submitting}
+              className="btn-second ring-focus h-11 justify-center disabled:opacity-60"
+            >
+              Cancel and return
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,14 +1,6 @@
+// src/pages/Leaderboard.jsx
 import React, { useMemo } from "react";
-import PhaseFrame from "../components/PhaseFrame";
 
-/**
- * Props:
- * - board = [{ id, name, total }]
- * - onNext? () => void  (optional; if not provided, just shows “waiting…”)
- * - title? string       (optional)
- * - buttonLabel? string (optional; defaults to "Continue →")
- * - waitingText? string (optional; defaults to "Waiting for next round…")
- */
 export default function Leaderboard({
   board = [],
   onNext,
@@ -18,54 +10,57 @@ export default function Leaderboard({
 }) {
   const rows = useMemo(() => [...board].sort((a, b) => b.total - a.total), [board]);
 
+  const rankBadge = (i) => {
+    if (i === 0) return "🥇";
+    if (i === 1) return "🥈";
+    if (i === 2) return "🥉";
+    return null;
+  };
+
   return (
-    <div style={{ padding: "2rem", maxWidth: 640, margin: "0 auto" }}>
-      <h2 style={{ marginBottom: 12 }}>{title}</h2>
+    <div className="min-h-[calc(100vh-3.5rem)] page-bg flex items-center justify-center px-4">
+      <div className="card-glass max-w-lg w-full">
+        <h2 className="text-2xl font-bold mb-4 text-center">{title}</h2>
 
-      {rows.length === 0 ? (
-        <p>No scores yet.</p>
-      ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #eee" }}>
-              <th style={{ padding: "8px" }}>#</th>
-              <th style={{ padding: "8px" }}>Player</th>
-              <th style={{ padding: "8px" }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id} style={{ borderBottom: "1px solid #f4f4f4" }}>
-                <td style={{ padding: "8px", width: 40 }}>{i + 1}</td>
-                <td style={{ padding: "8px" }}>{r.name}</td>
-                <td style={{ padding: "8px", fontWeight: 600 }}>{r.total}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <div style={{ marginTop: 20, textAlign: "center" }}>
-        {onNext ? (
-          <button
-            onClick={onNext}
-            style={{
-              padding: "0.75rem 1.25rem",
-              borderRadius: 10,
-              border: "none",
-              background: "#007bff",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 16,
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#0056b3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#007bff")}
-          >
-            {buttonLabel}
-          </button>
+        {rows.length === 0 ? (
+          <p className="text-gray-500 text-center">No scores yet.</p>
         ) : (
-          <div style={{ opacity: 0.7 }}>{waitingText}</div>
+          <div className="divide-y divide-black/5">
+            {rows.map((r, i) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between py-3 px-1"
+              >
+                {/* Left: rank + avatar + name */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-6 text-center tabnums">
+                    {rankBadge(i) || i + 1}
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold">
+                    {(r.name || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                  <span className="truncate">{r.name || "Player"}</span>
+                </div>
+
+                {/* Right: score */}
+                <span className="font-semibold tabnums">{r.total ?? 0}</span>
+              </div>
+            ))}
+          </div>
         )}
+
+        <div className="mt-6 text-center">
+          {onNext ? (
+            <button
+              onClick={onNext}
+              className="btn-primary ring-focus justify-center px-6 py-2 text-base"
+            >
+              {buttonLabel}
+            </button>
+          ) : (
+            <div className="text-sm text-gray-500">{waitingText}</div>
+          )}
+        </div>
       </div>
     </div>
   );

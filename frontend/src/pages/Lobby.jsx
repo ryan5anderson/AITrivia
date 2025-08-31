@@ -1,12 +1,7 @@
 // src/pages/Lobby.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ModeToggle from "../components/lobby/ModeToggle";
-import NameInput from "../components/lobby/NameInput";
-import HostForm from "../components/lobby/HostForm";
-import JoinForm from "../components/lobby/JoinForm";
 import { useSocket } from "../realtime/SocketProvider";
-import PhaseFrame from "../components/PhaseFrame";
 
 export default function Lobby() {
   const navigate = useNavigate();
@@ -17,115 +12,154 @@ export default function Lobby() {
   const [lobbyCode, setLobbyCode] = useState("");
   const [status, setStatus] = useState("");
 
-  const lobbyCodeRef = useRef("");
-  const isMounted = useRef(true);
-  const ready = !!socket && socket.connected;
+  const ready = !!socket?.connected;
 
-  // --- lifecycle + socket wiring
   useEffect(() => {
-    isMounted.current = true;
     if (!socket) return;
-
-    const onConnect = () => {
-      setStatus("Connected to lobby server");
-      // auto re-sync if we have a remembered room
-      try {
-        const last = localStorage.getItem("lastRoomCode");
-        if (last) {
-          socket.emit("sync-lobby", { lobbyCode: last });
-          socket.emit("sync-game", { lobbyCode: last });
-        }
-      } catch {}
-    };
-
+    const onConnect = () => setStatus("");
     const onDisconnect = () => setStatus("Disconnected");
-    const onConnectError = (err) => setStatus(`Connection error: ${err.message}`);
-
-    // If someone else starts the game while we're on this page, go to topic-select/:code
-    const onGameStarted = ({ roomCode }) => {
-      if (roomCode) {
-        try { localStorage.setItem("lastRoomCode", roomCode); } catch {}
-        navigate(`/topic-select/${roomCode}`, { replace: true });
-      } else {
-        console.warn("[client] game-started without roomCode payload");
-      }
-    };
+    const onError = (err) => setStatus(`Error: ${err.message}`);
+    const onGameStarted = ({ roomCode }) =>
+      roomCode && navigate(`/topic-select/${roomCode}`, { replace: true });
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("connect_error", onConnectError);
+    socket.on("connect_error", onError);
     socket.on("game-started", onGameStarted);
-
     return () => {
-      isMounted.current = false;
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("connect_error", onConnectError);
+      socket.off("connect_error", onError);
       socket.off("game-started", onGameStarted);
     };
   }, [socket, navigate]);
 
-  // --- create lobby
   const createLobby = (e) => {
-    e?.preventDefault?.();
-    if (!name.trim()) return setStatus("Please enter a name");
-    if (!ready) return setStatus("Connecting… please wait.");
-    setStatus("");
-
+    e.preventDefault();
+    if (!name.trim()) return setStatus("Enter a name");
+    if (!ready) return setStatus("Connecting…");
     socket.emit("create-lobby", { name: name.trim() }, ({ lobbyCode }) => {
       if (!lobbyCode) return setStatus("Failed to create lobby");
-
-      // ensure this socket is a player and name survives refresh
       socket.emit("join-lobby", { lobbyCode, name: name.trim() });
       sessionStorage.setItem("playerName", name.trim());
-
-      try { localStorage.setItem("lastRoomCode", lobbyCode); } catch {}
-      lobbyCodeRef.current = lobbyCode;
       navigate(`/waiting/${lobbyCode}`);
     });
   };
 
-  // --- join lobby
   const joinLobby = (e) => {
-    e?.preventDefault?.();
-    if (!name.trim()) return setStatus("Please enter a name");
-    if (!lobbyCode.trim()) return setStatus("Please enter a lobby code");
-    if (!ready) return setStatus("Connecting… please wait.");
-    setStatus("");
-
+    e.preventDefault();
+    if (!name.trim() || !lobbyCode.trim()) return setStatus("Missing info");
+    if (!ready) return setStatus("Connecting…");
     const code = lobbyCode.trim().toUpperCase();
     socket.emit("join-lobby", { lobbyCode: code, name: name.trim() }, (res) => {
       if (res?.error) return setStatus(res.error);
-
       sessionStorage.setItem("playerName", name.trim());
-      try { localStorage.setItem("lastRoomCode", code); } catch {}
-      lobbyCodeRef.current = code;
       navigate(`/waiting/${code}`);
     });
   };
 
-  return (
-    <div style={{ maxWidth: 420, margin: "3rem auto", textAlign: "center" }}>
-      <h2>🧑‍🤝‍🧑 Lobby</h2>
-      <p>Create a lobby as host, or join with a code.</p>
+  const statusText = status || (ready ? "Connected" : "Connecting…");
+  const statusClass =
+    status && /(error|fail|disconnect)/i.test(status)
+      ? "bg-rose-50 text-rose-700 border border-rose-200"
+      : ready
+      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+      : "bg-amber-50 text-amber-700 border border-amber-200";
 
-      <div style={{ fontSize: 12, opacity: 0.7, marginBottom: "0.5rem", minHeight: 18 }}>
-        {status || (ready ? "Connected" : "Connecting…")}
+  const canSubmit =
+    name.trim() && (mode === "host" || (mode === "join" && lobbyCode.trim())) && ready;
+
+  const onSubmit = mode === "host" ? createLobby : joinLobby;
+
+  return (
+    <div className="min-h-[calc(100vh-3.5rem)] page-bg overflow-hidden flex items-center justify-center px-4">
+      <div className="card-glass max-w-md w-full min-h-[460px] p-6 flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-brand-blue">🧑‍🤝‍🧑 Lobby</h2>
+            <p className="text-gray-600 mt-1">Host a lobby or join with a code.</p>
+          </div>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium tabnums ${statusClass}`}
+          >
+            {statusText}
+          </span>
+        </div>
+
+        {/* Toggle */}
+        <div className="mt-4 inline-flex rounded-xl bg-black/5 p-1 self-center">
+          <button
+            type="button"
+            onClick={() => setMode("host")}
+            className={`px-4 h-9 rounded-lg text-sm font-medium transition ${
+              mode === "host"
+                ? "bg-brand-orange text-white"
+                : "text-gray-700 hover:bg-black/10"
+            }`}
+          >
+            I’m the Host
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("join")}
+            className={`px-4 h-9 rounded-lg text-sm font-medium transition ${
+              mode === "join"
+                ? "bg-brand-orange text-white"
+                : "text-gray-700 hover:bg-black/10"
+            }`}
+          >
+            I’m Joining
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={onSubmit} className="mt-5 space-y-4 flex-1">
+          <label className="block">
+            <span className="text-sm font-medium">Display name</span>
+            <input
+              type="text"
+              className="input ring-focus mt-1 h-12 text-base"
+              placeholder="Your display name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              onKeyDown={(e) => e.key === "Enter" && canSubmit && onSubmit(e)}
+            />
+          </label>
+
+          {mode === "join" && (
+            <label className="block">
+              <span className="text-sm font-medium">Lobby code</span>
+              <input
+                type="text"
+                className="input ring-focus mt-1 h-12 text-base uppercase tracking-widest"
+                placeholder="ABCD"
+                value={lobbyCode}
+                onChange={(e) => setLobbyCode(e.target.value.toUpperCase())}
+                maxLength={8}
+                required
+                onKeyDown={(e) => e.key === "Enter" && canSubmit && onSubmit(e)}
+              />
+            </label>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="btn-primary ring-focus w-full justify-center h-12 disabled:opacity-60 disabled:cursor-not-allowed bg-brand-orange hover:bg-brand-yellow"
+          >
+            {mode === "host" ? "Create Lobby" : "Join Lobby"}
+          </button>
+        </form>
+
+        <p className="mt-auto text-[12px] text-gray-500 text-center">
+          Tip: share the room code with friends to play together.
+        </p>
       </div>
 
-      <ModeToggle mode={mode} setMode={setMode} />
-      <NameInput name={name} setName={setName} />
-
-      {mode === "host" ? (
-        <HostForm disabled={!name.trim() || !ready} onCreate={createLobby} />
-      ) : (
-        <JoinForm
-          lobbyCode={lobbyCode}
-          setLobbyCode={setLobbyCode}
-          disabled={!name.trim() || !lobbyCode.trim() || !ready}
-          onSubmit={joinLobby}
-        />
-      )}
+      {/* Brand stripe */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#EB773E] to-[#F7B301]" />
     </div>
   );
 }
